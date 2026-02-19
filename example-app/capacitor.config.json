@@ -1,0 +1,13 @@
+{
+  "appId": "app.capgo.app.attest",
+  "appName": "App Attest Example",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    },
+    "AppAttest": {
+      "cloudProjectNumber": "123456789012"
+    }
+  }
+}
