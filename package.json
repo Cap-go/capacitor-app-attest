@@ -1,6 +1,6 @@
 {
   "name": "@capgo/capacitor-app-attest",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "App Attest on iOS and Play Integrity attestation on Android for Capacitor",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
