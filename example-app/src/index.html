@@ -65,6 +65,16 @@
         color: #0f172a;
         font-weight: 700;
       }
+      input[type='checkbox'] {
+        inline-size: 1.1rem;
+        block-size: 1.1rem;
+        padding: 0;
+      }
+      .checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
       .actions {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -89,7 +99,7 @@
       <section class="grid">
         <h1>@capgo/capacitor-app-attest</h1>
         <p class="lead">
-          Try App Attest on iOS and Play Integrity on Android from this test surface.
+          Try App Attest on iOS, Play Integrity on Android, and optional fraud signals.
         </p>
       </section>
 
@@ -111,15 +121,26 @@
           <label for="cloudProjectNumber">cloudProjectNumber (Android)</label>
           <input id="cloudProjectNumber" type="text" placeholder="123456789012" />
         </div>
+        <div class="field">
+          <label for="hashSalt">Widevine hashSalt (Android, optional)</label>
+          <input id="hashSalt" type="text" placeholder="Defaults to Android package name" />
+        </div>
+        <label class="checkbox" for="includeRawId">
+          <input id="includeRawId" type="checkbox" />
+          Include raw Widevine ID
+        </label>
       </section>
 
       <section class="grid">
         <h2>Actions</h2>
         <div class="actions">
           <button id="isSupported" type="button">isSupported</button>
+          <button id="getCapabilities" type="button">getCapabilities</button>
           <button id="prepare" type="button">prepare</button>
           <button id="createAttestation" type="button">createAttestation</button>
           <button id="createAssertion" type="button">createAssertion</button>
+          <button id="getWidevineFingerprint" type="button">getWidevineFingerprint</button>
+          <button id="getDeviceCheckToken" type="button">getDeviceCheckToken</button>
           <button id="storeKey" type="button">storeKeyId</button>
           <button id="getStoredKey" type="button">getStoredKeyId</button>
           <button id="clearStoredKey" type="button">clearStoredKeyId</button>

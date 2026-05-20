@@ -1,6 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
 
 import type {
+  AppAttestCapabilities,
   AppAttestPlugin,
   AttestKeyOptions,
   AttestKeyResult,
@@ -8,6 +9,7 @@ import type {
   CreateAssertionResult,
   CreateAttestationOptions,
   CreateAttestationResult,
+  DeviceCheckTokenResult,
   GenerateAssertionOptions,
   GenerateAssertionResult,
   GenerateKeyOptions,
@@ -18,6 +20,8 @@ import type {
   PrepareOptions,
   PrepareResult,
   StoreKeyIdOptions,
+  WidevineFingerprintOptions,
+  WidevineFingerprintResult,
 } from './definitions';
 
 const STORAGE_KEY = 'CapgoAppAttestKeyId';
@@ -29,6 +33,20 @@ export class AppAttestWeb extends WebPlugin implements AppAttestPlugin {
       isSupported: false,
       platform: 'web',
       format: 'web-fallback',
+    };
+  }
+
+  async getCapabilities(): Promise<AppAttestCapabilities> {
+    return {
+      platform: 'web',
+      appAttest: { supported: false },
+      playIntegrity: { supported: false },
+      deviceCheck: { supported: false },
+      widevine: {
+        supported: false,
+        fingerprintAvailable: false,
+        securityLevelScanSupported: false,
+      },
     };
   }
 
@@ -58,6 +76,15 @@ export class AppAttestWeb extends WebPlugin implements AppAttestPlugin {
   async createAssertion(_options: CreateAssertionOptions): Promise<CreateAssertionResult> {
     void _options;
     throw new Error(WEB_ERROR_MESSAGE);
+  }
+
+  async getWidevineFingerprint(_options?: WidevineFingerprintOptions): Promise<WidevineFingerprintResult> {
+    void _options;
+    throw new Error('Widevine fingerprinting is only available on Android.');
+  }
+
+  async getDeviceCheckToken(): Promise<DeviceCheckTokenResult> {
+    throw new Error('DeviceCheck is only available on iOS.');
   }
 
   async storeKeyId(options: StoreKeyIdOptions): Promise<OperationResult> {

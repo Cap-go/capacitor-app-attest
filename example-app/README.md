@@ -27,3 +27,5 @@ Play Integrity token calls need a Google Cloud project number. You can set it in
   }
 }
 ```
+
+Widevine fingerprinting is optional and does not need extra Android setup. Use the Widevine action only when testing that signal on a physical Android device.

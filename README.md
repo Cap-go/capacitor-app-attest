@@ -7,8 +7,9 @@
 </div>
 
 Cross-platform device attestation for Capacitor:
-- iOS: Apple App Attest (`DeviceCheck`)
+- iOS: Apple App Attest (`DeviceCheck`) and optional DeviceCheck tokens
 - Android: Google Play Integrity Standard API token attestation
+- Optional Android fraud signal: Widevine DRM fingerprint
 
 ## Why this plugin
 
@@ -16,6 +17,7 @@ This plugin gives you one JavaScript API for both platforms while using only the
 
 - iOS uses Apple App Attest.
 - Android uses Google Play Integrity Standard API.
+- Optional Android Widevine support is exposed separately for apps that need a DRM-backed fraud signal.
 - No custom cryptography, no random app-side security scheme.
 - Same JS methods and same output shape on both platforms (`platform`, `format`, `token`, `keyId`).
 
@@ -28,6 +30,8 @@ Attestation only adds value when validated on your backend.
 - Never trust client-side success alone.
 - Always verify App Attest / Play Integrity payloads server-side.
 - Reject tokens/assertions that fail signature, nonce, app identity, or environment checks.
+- Treat Widevine values as sensitive identifiers. Use them only for fraud/security, disclose the use in your privacy policy, and do not bridge them with advertising identifiers.
+- iOS does not expose a stable device fingerprint. Use App Attest and DeviceCheck instead.
 
 ## Unified API design
 
@@ -36,6 +40,12 @@ Recommended JS API:
 - `prepare()`
 - `createAttestation()`
 - `createAssertion()`
+
+Optional fraud-signal methods:
+
+- `getCapabilities()`
+- `getWidevineFingerprint()` (Android only, optional)
+- `getDeviceCheckToken()` (iOS only)
 
 Legacy aliases are still available for compatibility:
 
@@ -67,8 +77,8 @@ The most complete doc is available here: https://capgo.app/docs/plugins/app-atte
 ## Install (Capacitor 8)
 
 ```bash
-bun add @capgo/capacitor-app-attest
-bunx cap sync
+npm install @capgo/capacitor-app-attest
+npx cap sync
 ```
 
 ## Platform setup
@@ -98,6 +108,8 @@ You can also pass `cloudProjectNumber` directly in method options.
 This plugin uses the **Standard Integrity API** flow on Android (`prepareIntegrityToken` + `request`).
 On Android, `prepare()` prepares the native Standard Integrity provider and returns a handle (`keyId`) for subsequent calls.
 
+Widevine fingerprinting is optional. It does not require extra Android permissions or extra setup, and it is not used by `prepare()`, `createAttestation()`, or `createAssertion()`. Only call `getWidevineFingerprint()` if your app needs that signal.
+
 ## Usage
 
 ```ts
@@ -123,6 +135,18 @@ const assertion = await AppAttest.createAssertion({
 
 // registration.token and assertion.token are verified server-side.
 console.log(registration, assertion);
+
+const capabilities = await AppAttest.getCapabilities();
+
+if (capabilities.platform === 'android' && capabilities.widevine.supported) {
+  const widevine = await AppAttest.getWidevineFingerprint();
+  await api.storeWidevineFingerprint(widevine.widevineIdSha256);
+}
+
+if (capabilities.platform === 'ios' && capabilities.deviceCheck.supported) {
+  const deviceCheck = await AppAttest.getDeviceCheckToken();
+  await api.verifyDeviceCheckToken(deviceCheck.token);
+}
 ```
 
 ## Backend handling
@@ -149,6 +173,12 @@ Request protection (`createAssertion`):
 3. Backend verifies assertion signature using the stored iOS App Attest key context.
 4. Enforce replay protection (single-use nonce + expiration + monotonic counter checks from verifier output).
 
+DeviceCheck (`getDeviceCheckToken`):
+
+1. App calls `getDeviceCheckToken()`.
+2. Backend sends the token to Apple's DeviceCheck server API.
+3. Backend maintains the two fraud/risk bits for that device in Apple's DeviceCheck service.
+
 ### Android backend (Play Integrity Standard API)
 
 Registration (`createAttestation`):
@@ -170,6 +200,13 @@ Request protection (`createAssertion`):
 2. App calls `createAssertion({ keyId, payload })`.
 3. Backend decodes token and checks `requestHash === base64url(SHA256(payload))`.
 4. Reject reused/expired payloads and enforce your integrity verdict policy.
+
+Widevine (`getWidevineFingerprint`):
+
+1. Call only when your fraud policy needs a DRM-backed identifier signal.
+2. Store `widevineIdSha256` by default.
+3. Request `widevineIdBase64` only with `includeRawId: true` when you explicitly need the raw identifier.
+4. Do not use Widevine values for advertising, attribution, or cross-app tracking.
 
 ## Workflow schemas
 
@@ -302,9 +339,12 @@ Assertion payload from app to backend:
 <docgen-index>
 
 * [`isSupported()`](#issupported)
+* [`getCapabilities()`](#getcapabilities)
 * [`prepare(...)`](#prepare)
 * [`createAttestation(...)`](#createattestation)
 * [`createAssertion(...)`](#createassertion)
+* [`getWidevineFingerprint(...)`](#getwidevinefingerprint)
+* [`getDeviceCheckToken()`](#getdevicechecktoken)
 * [`storeKeyId(...)`](#storekeyid)
 * [`getStoredKeyId()`](#getstoredkeyid)
 * [`clearStoredKeyId()`](#clearstoredkeyid)
@@ -340,6 +380,22 @@ isSupported() => Promise<IsSupportedResult>
 Checks whether native attestation is available on this device.
 
 **Returns:** <code>Promise&lt;<a href="#issupportedresult">IsSupportedResult</a>&gt;</code>
+
+--------------------
+
+
+### getCapabilities()
+
+```typescript
+getCapabilities() => Promise<AppAttestCapabilities>
+```
+
+Returns attestation and optional fraud-signal capabilities available on the current platform.
+
+Widevine is Android-only and optional. Apps that do not call Widevine methods do not need any
+Widevine-specific setup.
+
+**Returns:** <code>Promise&lt;<a href="#appattestcapabilities">AppAttestCapabilities</a>&gt;</code>
 
 --------------------
 
@@ -400,6 +456,44 @@ Android: returns Play Integrity Standard token.
 | **`options`** | <code><a href="#createassertionoptions">CreateAssertionOptions</a></code> |
 
 **Returns:** <code>Promise&lt;<a href="#createassertionresult">CreateAssertionResult</a>&gt;</code>
+
+--------------------
+
+
+### getWidevineFingerprint(...)
+
+```typescript
+getWidevineFingerprint(options?: WidevineFingerprintOptions | undefined) => Promise<WidevineFingerprintResult>
+```
+
+Returns an optional Android Widevine-derived fingerprint.
+
+This method is Android-only and is not part of the normal attestation flow. Call it only when
+your app needs a DRM-backed fraud signal and your privacy policy covers that use.
+
+The default `fingerprint` is SHA-256 over the Widevine device unique ID and a salt.
+If `hashSalt` is not provided, Android uses the app package name as the salt.
+
+The raw Widevine ID is sensitive and is only returned as base64 when `includeRawId` is true.
+
+| Param         | Type                                                                              |
+| ------------- | --------------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#widevinefingerprintoptions">WidevineFingerprintOptions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#widevinefingerprintresult">WidevineFingerprintResult</a>&gt;</code>
+
+--------------------
+
+
+### getDeviceCheckToken()
+
+```typescript
+getDeviceCheckToken() => Promise<DeviceCheckTokenResult>
+```
+
+Creates an iOS DeviceCheck token for server-side fraud-state lookups.
+
+**Returns:** <code>Promise&lt;<a href="#devicechecktokenresult">DeviceCheckTokenResult</a>&gt;</code>
 
 --------------------
 
@@ -515,6 +609,33 @@ Legacy alias for `createAssertion()`.
 | **`format`**      | <code><a href="#attestationformat">AttestationFormat</a></code>     |
 
 
+#### AppAttestCapabilities
+
+| Prop                | Type                                                                  | Description                              |
+| ------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
+| **`platform`**      | <code><a href="#attestationplatform">AttestationPlatform</a></code>   | Platform currently executing the plugin. |
+| **`appAttest`**     | <code><a href="#supportstatus">SupportStatus</a></code>               | Apple App Attest support.                |
+| **`playIntegrity`** | <code><a href="#supportstatus">SupportStatus</a></code>               | Android Play Integrity support.          |
+| **`deviceCheck`**   | <code><a href="#supportstatus">SupportStatus</a></code>               | iOS DeviceCheck support.                 |
+| **`widevine`**      | <code><a href="#widevinecapabilities">WidevineCapabilities</a></code> | Optional Android Widevine DRM support.   |
+
+
+#### SupportStatus
+
+| Prop            | Type                 | Description                                                |
+| --------------- | -------------------- | ---------------------------------------------------------- |
+| **`supported`** | <code>boolean</code> | Whether the capability is available on the current device. |
+
+
+#### WidevineCapabilities
+
+| Prop                             | Type                 | Description                                                                                                          |
+| -------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **`supported`**                  | <code>boolean</code> | Whether the Widevine DRM scheme is supported by the device.                                                          |
+| **`fingerprintAvailable`**       | <code>boolean</code> | Whether a Widevine fingerprint can be attempted. Actual access is confirmed when calling `getWidevineFingerprint()`. |
+| **`securityLevelScanSupported`** | <code>boolean</code> | Whether the Widevine security level property can be read.                                                            |
+
+
 #### PrepareResult
 
 | Prop           | Type                                                                |
@@ -569,6 +690,36 @@ Legacy alias for `createAssertion()`.
 | **`keyId`**              | <code>string</code> |
 | **`payload`**            | <code>string</code> |
 | **`cloudProjectNumber`** | <code>string</code> |
+
+
+#### WidevineFingerprintResult
+
+| Prop                   | Type                    | Description                                                                                 |
+| ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
+| **`platform`**         | <code>'android'</code>  | Always `android`.                                                                           |
+| **`source`**           | <code>'widevine'</code> | Always `widevine`.                                                                          |
+| **`fingerprint`**      | <code>string</code>     | Salted SHA-256 fingerprint for storing alongside a user record.                             |
+| **`widevineIdSha256`** | <code>string</code>     | Unsalted SHA-256 hash of the Widevine device unique ID.                                     |
+| **`widevineIdBase64`** | <code>string</code>     | Raw Widevine device unique ID encoded as base64. Returned only when `includeRawId` is true. |
+| **`securityLevel`**    | <code>string</code>     | Widevine security level when available, for example `L1` or `L3`.                           |
+| **`vendor`**           | <code>string</code>     | DRM vendor when available.                                                                  |
+| **`version`**          | <code>string</code>     | DRM plugin version when available.                                                          |
+| **`description`**      | <code>string</code>     | DRM plugin description when available.                                                      |
+
+
+#### WidevineFingerprintOptions
+
+| Prop               | Type                 | Description                                                                                 |
+| ------------------ | -------------------- | ------------------------------------------------------------------------------------------- |
+| **`includeRawId`** | <code>boolean</code> | Return the raw Widevine device unique ID as base64. Defaults to `false`.                    |
+| **`hashSalt`**     | <code>string</code>  | Optional salt used to derive `fingerprint`. Android uses the app package name when omitted. |
+
+
+#### DeviceCheckTokenResult
+
+| Prop        | Type                | Description                              |
+| ----------- | ------------------- | ---------------------------------------- |
+| **`token`** | <code>string</code> | iOS DeviceCheck token encoded as base64. |
 
 
 #### OperationResult
