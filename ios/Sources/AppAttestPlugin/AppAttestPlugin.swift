@@ -8,6 +8,9 @@ public class AppAttestPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "AppAttest"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getWidevineFingerprint", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDeviceCheckToken", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "attestKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateAssertion", returnType: CAPPluginReturnPromise),
@@ -20,6 +23,55 @@ public class AppAttestPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func isSupported(_ call: CAPPluginCall) {
         call.resolve(["isSupported": implementation.isSupported()])
+    }
+
+    @objc func getCapabilities(_ call: CAPPluginCall) {
+        call.resolve([
+            "platform": "ios",
+            "appAttest": [
+                "supported": implementation.isSupported()
+            ],
+            "playIntegrity": [
+                "supported": false
+            ],
+            "deviceCheck": [
+                "supported": implementation.isDeviceCheckSupported()
+            ],
+            "widevine": [
+                "supported": false,
+                "fingerprintAvailable": false,
+                "securityLevelScanSupported": false
+            ]
+        ])
+    }
+
+    @objc func getWidevineFingerprint(_ call: CAPPluginCall) {
+        call.reject("Widevine fingerprinting is only available on Android")
+    }
+
+    @objc func getDeviceCheckToken(_ call: CAPPluginCall) {
+        guard implementation.isDeviceCheckSupported() else {
+            call.reject(AppAttestError.deviceCheckNotSupported.localizedDescription)
+            return
+        }
+
+        DCDevice.current.generateToken { [weak self] token, error in
+            guard let self else { return }
+
+            if let error {
+                self.reject(call, message: "Error generating DeviceCheck token: \(error.localizedDescription)", error: error)
+                return
+            }
+
+            guard let token else {
+                self.reject(call, message: AppAttestError.missingGeneratedValue.localizedDescription)
+                return
+            }
+
+            self.resolve(call, payload: [
+                "token": token.base64EncodedString()
+            ])
+        }
     }
 
     @objc func generateKey(_ call: CAPPluginCall) {

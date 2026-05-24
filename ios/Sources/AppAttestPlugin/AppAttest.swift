@@ -9,6 +9,10 @@ import DeviceCheck
         return DCAppAttestService.shared.isSupported
     }
 
+    @objc public func isDeviceCheckSupported() -> Bool {
+        return DCDevice.current.isSupported
+    }
+
     public func createClientDataHash(from input: String) throws -> Data {
         guard let payloadData = input.data(using: .utf8) else {
             throw AppAttestError.invalidInput
@@ -36,6 +40,7 @@ public enum AppAttestError: LocalizedError {
     case missingPayload
     case invalidInput
     case missingGeneratedValue
+    case deviceCheckNotSupported
 
     public var errorDescription: String? {
         switch self {
@@ -51,6 +56,8 @@ public enum AppAttestError: LocalizedError {
             return "Invalid input format"
         case .missingGeneratedValue:
             return "Native API returned no value"
+        case .deviceCheckNotSupported:
+            return "DeviceCheck is not supported on this device"
         }
     }
 }

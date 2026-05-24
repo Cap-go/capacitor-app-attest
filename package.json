@@ -1,7 +1,7 @@
 {
   "name": "@capgo/capacitor-app-attest",
   "version": "8.1.10",
-  "description": "App Attest on iOS and Play Integrity attestation on Android for Capacitor",
+  "description": "App Attest on iOS, Play Integrity on Android, and optional device fraud signals for Capacitor",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -23,7 +23,9 @@
     "security",
     "attestation",
     "app-attest",
-    "play-integrity"
+    "play-integrity",
+    "devicecheck",
+    "widevine"
   ],
   "repository": {
     "type": "git",

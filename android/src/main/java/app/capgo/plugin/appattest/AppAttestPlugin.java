@@ -1,5 +1,8 @@
 package app.capgo.plugin.appattest;
 
+import app.capgo.plugin.appattest.AppAttest.AppAttestException;
+import app.capgo.plugin.appattest.AppAttest.WidevineCapabilities;
+import app.capgo.plugin.appattest.AppAttest.WidevineFingerprint;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -15,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AppAttestPlugin extends Plugin {
 
     private static final String INTEGRITY_ERROR = "INTEGRITY_ERROR";
+    private static final String FORMAT_PLAY_INTEGRITY = "google-play-integrity-standard";
     private static final String CONFIG_CLOUD_PROJECT_NUMBER = "cloudProjectNumber";
     private static final String DEFAULT_ANDROID_KEY_ID = "android-standard-integrity";
 
@@ -29,6 +33,47 @@ public class AppAttestPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getCapabilities(PluginCall call) {
+        WidevineCapabilities widevine = implementation.getWidevineCapabilities();
+
+        JSObject response = new JSObject();
+        response.put("platform", "android");
+        response.put("appAttest", supportToJson(false));
+        response.put("playIntegrity", supportToJson(implementation.isPlayIntegritySupported(getContext())));
+        response.put("deviceCheck", supportToJson(false));
+        response.put("widevine", widevineCapabilitiesToJson(widevine));
+        call.resolve(response);
+    }
+
+    @PluginMethod
+    public void getWidevineFingerprint(PluginCall call) {
+        boolean includeRawId = Boolean.TRUE.equals(call.getBoolean("includeRawId"));
+        String hashSalt = call.getString("hashSalt");
+
+        try {
+            WidevineFingerprint result = implementation.getWidevineFingerprint(getContext().getPackageName(), includeRawId, hashSalt);
+            JSObject response = new JSObject();
+            response.put("platform", "android");
+            response.put("source", "widevine");
+            response.put("fingerprint", result.fingerprint);
+            response.put("widevineIdSha256", result.widevineIdSha256);
+            putOptional(response, "widevineIdBase64", result.widevineIdBase64);
+            putOptional(response, "securityLevel", result.securityLevel);
+            putOptional(response, "vendor", result.vendor);
+            putOptional(response, "version", result.version);
+            putOptional(response, "description", result.description);
+            call.resolve(response);
+        } catch (AppAttestException error) {
+            call.reject(error.getMessage(), "WIDEVINE_ERROR", error);
+        }
+    }
+
+    @PluginMethod
+    public void getDeviceCheckToken(PluginCall call) {
+        call.reject("DeviceCheck is only available on iOS");
+    }
+
+    @PluginMethod
     public void generateKey(PluginCall call) {
         if (!implementation.isSupported(getContext())) {
             call.reject("Play Integrity is not supported on this device");
@@ -38,6 +83,7 @@ public class AppAttestPlugin extends Plugin {
         prepareProvider(call, DEFAULT_ANDROID_KEY_ID, (provider) -> {
             JSObject response = new JSObject();
             response.put("keyId", DEFAULT_ANDROID_KEY_ID);
+            response.put("format", FORMAT_PLAY_INTEGRITY);
             call.resolve(response);
         });
     }
@@ -116,6 +162,26 @@ public class AppAttestPlugin extends Plugin {
         call.resolve(response);
     }
 
+    private JSObject widevineCapabilitiesToJson(WidevineCapabilities capabilities) {
+        JSObject result = new JSObject();
+        result.put("supported", capabilities.supported);
+        result.put("fingerprintAvailable", capabilities.fingerprintAvailable);
+        result.put("securityLevelScanSupported", capabilities.securityLevelScanSupported);
+        return result;
+    }
+
+    private JSObject supportToJson(boolean supported) {
+        JSObject result = new JSObject();
+        result.put("supported", supported);
+        return result;
+    }
+
+    private void putOptional(JSObject object, String key, String value) {
+        if (!isBlank(value)) {
+            object.put(key, value);
+        }
+    }
+
     private void requestStandardIntegrityToken(
         PluginCall call,
         String keyId,
@@ -146,6 +212,7 @@ public class AppAttestPlugin extends Plugin {
                     JSObject result = new JSObject();
                     result.put(responseField, token.token());
                     result.put("keyId", keyId);
+                    result.put("format", FORMAT_PLAY_INTEGRITY);
                     if (includeChallenge) {
                         result.put("challenge", payload);
                     }
