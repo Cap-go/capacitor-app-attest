@@ -1,3 +1,5 @@
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Capacitor } from '@capacitor/core';
 import { AppAttest } from '@capgo/capacitor-app-attest';
 
 const output = document.getElementById('output');
@@ -106,3 +108,9 @@ document.getElementById('clearStoredKey')?.addEventListener('click', async () =>
     printError('clearStoredKeyId', error);
   }
 });
+
+if (Capacitor.isNativePlatform()) {
+  CapacitorUpdater.notifyAppReady().catch((error) => {
+    console.error('Capgo notifyAppReady failed', error);
+  });
+}
