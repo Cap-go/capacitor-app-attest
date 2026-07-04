@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
 import type {
+  AppAttestCapabilities,
   AppAttestPlugin,
   AttestKeyOptions,
   AttestKeyResult,
@@ -20,6 +21,9 @@ import type {
   PrepareOptions,
   PrepareResult,
   StoreKeyIdOptions,
+  DeviceCheckTokenResult,
+  WidevineFingerprintOptions,
+  WidevineFingerprintResult,
 } from './definitions';
 
 interface NativeIsSupportedResult {
@@ -43,9 +47,12 @@ interface NativeGenerateAssertionResult {
 
 interface NativeAppAttestPlugin {
   isSupported(): Promise<NativeIsSupportedResult>;
+  getCapabilities(): Promise<AppAttestCapabilities>;
   generateKey(options?: PrepareOptions): Promise<NativeGenerateKeyResult>;
   attestKey(options: AttestKeyOptions): Promise<NativeAttestKeyResult>;
   generateAssertion(options: GenerateAssertionOptions): Promise<NativeGenerateAssertionResult>;
+  getWidevineFingerprint(options?: WidevineFingerprintOptions): Promise<WidevineFingerprintResult>;
+  getDeviceCheckToken(): Promise<DeviceCheckTokenResult>;
   storeKeyId(options: StoreKeyIdOptions): Promise<OperationResult>;
   getStoredKeyId(): Promise<GetStoredKeyIdResult>;
   clearStoredKeyId(): Promise<OperationResult>;
@@ -91,6 +98,10 @@ const isSupported = async (): Promise<IsSupportedResult> => {
     ...withPlatform(),
     isSupported: status.isSupported,
   };
+};
+
+const getCapabilities = async (): Promise<AppAttestCapabilities> => {
+  return AppAttestNative.getCapabilities();
 };
 
 const prepare = async (options?: PrepareOptions): Promise<PrepareResult> => {
@@ -146,9 +157,12 @@ const generateAssertion = async (options: GenerateAssertionOptions): Promise<Gen
 
 const AppAttest: AppAttestPlugin = {
   isSupported,
+  getCapabilities,
   prepare,
   createAttestation,
   createAssertion,
+  getWidevineFingerprint: (options) => AppAttestNative.getWidevineFingerprint(options),
+  getDeviceCheckToken: () => AppAttestNative.getDeviceCheckToken(),
   storeKeyId: (options) => AppAttestNative.storeKeyId(options),
   getStoredKeyId: () => AppAttestNative.getStoredKeyId(),
   clearStoredKeyId: () => AppAttestNative.clearStoredKeyId(),

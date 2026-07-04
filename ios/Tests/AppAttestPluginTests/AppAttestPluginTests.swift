@@ -7,6 +7,11 @@ final class AppAttestPluginTests: XCTestCase {
         _ = implementation.isSupported()
     }
 
+    func testDeviceCheckSupportCheckDoesNotCrash() {
+        let implementation = AppAttest()
+        _ = implementation.isDeviceCheckSupported()
+    }
+
     func testClientDataHashIsDeterministic() throws {
         let implementation = AppAttest()
 
