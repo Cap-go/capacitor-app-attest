@@ -74,6 +74,21 @@ public class AppAttestPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void prepare(PluginCall call) {
+        generateKey(call);
+    }
+
+    @PluginMethod
+    public void createAttestation(PluginCall call) {
+        attestKey(call);
+    }
+
+    @PluginMethod
+    public void createAssertion(PluginCall call) {
+        generateAssertion(call);
+    }
+
+    @PluginMethod
     public void generateKey(PluginCall call) {
         if (!implementation.isSupported(getContext())) {
             call.reject("Play Integrity is not supported on this device");
