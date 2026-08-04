@@ -48,6 +48,9 @@ interface NativeGenerateAssertionResult {
 interface NativeAppAttestPlugin {
   isSupported(): Promise<NativeIsSupportedResult>;
   getCapabilities(): Promise<AppAttestCapabilities>;
+  prepare(options?: PrepareOptions): Promise<NativeGenerateKeyResult>;
+  createAttestation(options: AttestKeyOptions): Promise<NativeAttestKeyResult>;
+  createAssertion(options: GenerateAssertionOptions): Promise<NativeGenerateAssertionResult>;
   generateKey(options?: PrepareOptions): Promise<NativeGenerateKeyResult>;
   attestKey(options: AttestKeyOptions): Promise<NativeAttestKeyResult>;
   generateAssertion(options: GenerateAssertionOptions): Promise<NativeGenerateAssertionResult>;
@@ -105,7 +108,7 @@ const getCapabilities = async (): Promise<AppAttestCapabilities> => {
 };
 
 const prepare = async (options?: PrepareOptions): Promise<PrepareResult> => {
-  const result = await AppAttestNative.generateKey(options);
+  const result = await AppAttestNative.prepare(options);
   return {
     ...withPlatform(),
     keyId: result.keyId,
@@ -113,7 +116,7 @@ const prepare = async (options?: PrepareOptions): Promise<PrepareResult> => {
 };
 
 const createAttestation = async (options: CreateAttestationOptions): Promise<CreateAttestationResult> => {
-  const result = await AppAttestNative.attestKey(options);
+  const result = await AppAttestNative.createAttestation(options);
   const keyId = result.keyId ?? options.keyId;
   const challenge = result.challenge ?? options.challenge;
   return {
@@ -125,7 +128,7 @@ const createAttestation = async (options: CreateAttestationOptions): Promise<Cre
 };
 
 const createAssertion = async (options: CreateAssertionOptions): Promise<CreateAssertionResult> => {
-  const result = await AppAttestNative.generateAssertion(options);
+  const result = await AppAttestNative.createAssertion(options);
   const keyId = result.keyId ?? options.keyId;
   return {
     ...withPlatform(),

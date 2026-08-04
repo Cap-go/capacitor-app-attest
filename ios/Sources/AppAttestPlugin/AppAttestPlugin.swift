@@ -11,6 +11,9 @@ public class AppAttestPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getCapabilities", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getWidevineFingerprint", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getDeviceCheckToken", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "prepare", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "createAttestation", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "createAssertion", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "attestKey", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateAssertion", returnType: CAPPluginReturnPromise),
@@ -72,6 +75,18 @@ public class AppAttestPlugin: CAPPlugin, CAPBridgedPlugin {
                 "token": token.base64EncodedString()
             ])
         }
+    }
+
+    @objc func prepare(_ call: CAPPluginCall) {
+        generateKey(call)
+    }
+
+    @objc func createAttestation(_ call: CAPPluginCall) {
+        attestKey(call)
+    }
+
+    @objc func createAssertion(_ call: CAPPluginCall) {
+        generateAssertion(call)
     }
 
     @objc func generateKey(_ call: CAPPluginCall) {
