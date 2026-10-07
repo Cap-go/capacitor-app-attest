@@ -1,10 +1,28 @@
 # @capgo/capacitor-app-attest
-<a href="https://capgo.app/"><img src="https://capgo.app/readme-banner.svg?repo=Cap-go/capacitor-app-attest" alt="Capgo - Instant updates for Capacitor" /></a>
+
+Prove to your backend that requests come from your genuine app on a real device: Apple App Attest on iOS and Google Play Integrity on Android, behind one API. Block bots, modified apps and API abuse.
+
+<a href="https://capgo.app/?ref=plugin_app_attest"><img src="https://capgo.app/readme-banner.svg?repo=Cap-go/capacitor-app-attest" alt="Capgo - Instant updates for Capacitor" /></a>
 
 <div align="center">
-  <h2><a href="https://capgo.app/?ref=plugin_app_attest"> ➡️ Get Instant updates for your App with Capgo</a></h2>
-  <h2><a href="https://capgo.app/consulting/?ref=plugin_app_attest"> Missing a feature? We’ll build the plugin for you 💪</a></h2>
+  <p><b>Capgo</b>: open-source live updates for Ionic and Capacitor apps. Ship OTA fixes and features instantly, without waiting for app store review.</p>
+  <h2><a href="https://capgo.app/register/?ref=plugin_app_attest">➡️ Get started for free</a></h2>
+  <p>14-day unlimited free trial. No credit card required</p>
+  <p><a href="https://capgo.app/consulting/?ref=plugin_app_attest">Missing a feature? We'll build the plugin for you 💪</a></p>
 </div>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Cap-go/capacitor-app-attest/main/assets/github-social-preview.png" alt="@capgo/capacitor-app-attest for Capacitor apps" width="300" />
+</p>
+
+## Key features
+
+- **Attestation**: `createAttestation()` creates a registration token bound to a challenge issued by your backend.
+- **Request assertions**: `createAssertion()` signs a request payload so the server can verify each call.
+- **Key handling**: `prepare()` creates an App Attest key on iOS and prepares a Play Integrity token provider on Android. `storeKeyId()`, `getStoredKeyId()` and `clearStoredKeyId()` manage the key ID, which persists on iOS and lasts for the process on Android.
+- **Capabilities**: `isSupported()` and `getCapabilities()` report what the current device offers.
+- **Extra fraud signals**: `getDeviceCheckToken()` for iOS DeviceCheck and `getWidevineFingerprint()` on Android.
+- **Platforms**: iOS and Android. iOS uses App Attest and DeviceCheck, Android uses the Play Integrity Standard API. Attestation calls throw on web.
 
 Cross-platform device attestation for Capacitor:
 - iOS: Apple App Attest (`DeviceCheck`) and optional DeviceCheck tokens
