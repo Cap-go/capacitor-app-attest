@@ -19,7 +19,7 @@ Prove to your backend that requests come from your genuine app on a real device:
 
 - **Attestation**: `createAttestation()` creates a registration token bound to a challenge issued by your backend.
 - **Request assertions**: `createAssertion()` signs a request payload so the server can verify each call.
-- **Key handling**: `prepare()` creates the key, and `storeKeyId()`, `getStoredKeyId()` and `clearStoredKeyId()` manage it.
+- **Key handling**: `prepare()` creates an App Attest key on iOS and prepares a Play Integrity token provider on Android. `storeKeyId()`, `getStoredKeyId()` and `clearStoredKeyId()` manage the key ID, which persists on iOS and lasts for the process on Android.
 - **Capabilities**: `isSupported()` and `getCapabilities()` report what the current device offers.
 - **Extra fraud signals**: `getDeviceCheckToken()` for iOS DeviceCheck and `getWidevineFingerprint()` on Android.
 - **Platforms**: iOS and Android. iOS uses App Attest and DeviceCheck, Android uses the Play Integrity Standard API. Attestation calls throw on web.
