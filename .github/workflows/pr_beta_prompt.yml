@@ -1,12 +1,28 @@
 name: PR beta publish prompt
 
 on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   pull_request_target:
     types:
       - opened
       - reopened
       - synchronize
       - ready_for_review
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to refresh the beta publish comment for
+        required: true
+        type: number
+
+concurrency:
+  group: pr-beta-prompt-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
 
 permissions:
   issues: write
@@ -15,6 +31,14 @@ permissions:
 jobs:
   comment:
     runs-on: ubuntu-latest
+    # Same-repo PRs use pull_request so the job is not starved behind duplicate test workflows.
+    # Fork PRs use pull_request_target for the elevated token needed to comment.
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+        (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository)
+      }}
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
     steps:
@@ -25,12 +49,29 @@ jobs:
       - name: Upsert beta publish comment
         uses: actions/github-script@v9.0.0
         env:
-          IS_SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository && 'true' || 'false' }}
+          DISPATCH_PR_NUMBER: ${{ inputs.pr_number }}
         with:
           script: |
             const marker = '<!-- pr-beta-publish -->';
-            const sameRepo = process.env.IS_SAME_REPO === 'true';
-            const pr = context.payload.pull_request;
+            let pr = context.payload.pull_request;
+
+            if (!pr && process.env.DISPATCH_PR_NUMBER) {
+              const prNumber = Number(process.env.DISPATCH_PR_NUMBER);
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+              pr = data;
+            }
+
+            if (!pr) {
+              core.setFailed('No pull request found for this workflow run.');
+              return;
+            }
+
+            const sameRepo = pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`;
+
             const body = sameRepo
               ? [
                   marker,

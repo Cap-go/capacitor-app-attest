@@ -1,5 +1,10 @@
 name: Build source code and test it
 
+concurrency:
+  # Renovate pushes the branch and updates the PR in one sync; dedupe those runs.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
