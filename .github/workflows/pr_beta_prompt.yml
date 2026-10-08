@@ -25,6 +25,12 @@ permissions:
 jobs:
   comment:
     runs-on: ubuntu-latest
+    # Fork PRs need pull_request_target for a token that can comment on the PR.
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event.pull_request.head.repo.full_name != github.repository
+      }}
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
     steps:
