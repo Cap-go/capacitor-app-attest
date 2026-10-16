@@ -1,6 +1,6 @@
 {
   "name": "@capgo/capacitor-app-attest",
-  "version": "8.2.10",
+  "version": "8.2.14",
   "description": "App Attest on iOS, Play Integrity on Android, and optional device fraud signals for Capacitor",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -75,7 +75,7 @@
     "rimraf": "^6.1.0",
     "rollup": "^4.53.2",
     "swiftlint": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "@capacitor/core": "^8.0.0"
