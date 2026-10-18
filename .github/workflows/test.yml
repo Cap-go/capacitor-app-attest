@@ -1,10 +1,5 @@
 name: Build source code and test it
 
-concurrency:
-  # Renovate pushes the branch and updates the PR in one sync; dedupe those runs.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
-
 on:
   push:
     branches:
@@ -15,6 +10,10 @@ on:
 
 jobs:
   guard_swiftpm_version:
+    concurrency:
+      # Renovate push and PR sync share a SHA; dedupe builds without cancelling comment.
+      group: ${{ github.workflow }}-guard_swiftpm_version-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -29,6 +28,9 @@ jobs:
             exit 1
           fi
   build_android:
+    concurrency:
+      group: ${{ github.workflow }}-build_android-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -59,6 +61,9 @@ jobs:
         shell: bash
         run: bash ./.github/scripts/verify-packed-example.sh android
   build_ios:
+    concurrency:
+      group: ${{ github.workflow }}-build_ios-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: macOS-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -84,6 +89,9 @@ jobs:
         shell: bash
         run: bash ./.github/scripts/verify-packed-example.sh ios
   web:
+    concurrency:
+      group: ${{ github.workflow }}-web-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
