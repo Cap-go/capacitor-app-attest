@@ -1,10 +1,5 @@
 name: Build source code and test it
 
-concurrency:
-  # Renovate pushes the branch and updates the PR in one sync; dedupe those runs.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
-
 on:
   push:
     branches:
@@ -15,6 +10,10 @@ on:
 
 jobs:
   guard_swiftpm_version:
+    concurrency:
+      # Renovate push and PR sync share a SHA; dedupe builds without cancelling comment.
+      group: ${{ github.workflow }}-guard_swiftpm_version-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -29,6 +28,9 @@ jobs:
             exit 1
           fi
   build_android:
+    concurrency:
+      group: ${{ github.workflow }}-build_android-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -59,6 +61,9 @@ jobs:
         shell: bash
         run: bash ./.github/scripts/verify-packed-example.sh android
   build_ios:
+    concurrency:
+      group: ${{ github.workflow }}-build_ios-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: macOS-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -84,6 +89,9 @@ jobs:
         shell: bash
         run: bash ./.github/scripts/verify-packed-example.sh ios
   web:
+    concurrency:
+      group: ${{ github.workflow }}-web-${{ github.event.pull_request.head.sha || github.sha }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
     timeout-minutes: 10
@@ -108,3 +116,70 @@ jobs:
       - name: Verify
         id: verify_code
         run: bun run verify:web
+  comment:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
+    timeout-minutes: 10
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+      - name: Upsert beta publish comment
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- pr-beta-publish -->';
+            const pr = context.payload.pull_request;
+
+            if (!pr) {
+              core.setFailed('No pull request found for this workflow run.');
+              return;
+            }
+
+            const body = [
+              marker,
+              '',
+              '## Beta npm build',
+              '',
+              'Maintainers can publish this PR to npm for fast testing.',
+              '',
+              'Comment `/publish-beta` after the PR checks are green.',
+              '',
+              'The workflow will:',
+              '- publish a prerelease package on the `beta` tag',
+              `- add a pinned \`pr-${pr.number}\` dist-tag for this exact PR build`,
+              '- update this comment with the install command',
+              '',
+              'Security note: beta publish is only enabled for branches inside this repository.',
+            ].join('\n');
+
+            const { owner, repo } = context.repo;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) => comment.user.type === 'Bot' && comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pr.number,
+              body,
+            });
