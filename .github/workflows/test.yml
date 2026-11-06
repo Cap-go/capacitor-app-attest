@@ -11,8 +11,9 @@ on:
 jobs:
   guard_swiftpm_version:
     concurrency:
-      # Renovate push and PR sync share a SHA; dedupe builds without cancelling comment.
-      group: ${{ github.workflow }}-guard_swiftpm_version-${{ github.event.pull_request.head.sha || github.sha }}
+      # Same SHA on renovate push + pull_request must not share one group, or cancel-in-progress
+      # will cancel the other event's run and mark checks failed.
+      group: ${{ github.workflow }}-guard_swiftpm_version-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.event_name }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
@@ -29,7 +30,7 @@ jobs:
           fi
   build_android:
     concurrency:
-      group: ${{ github.workflow }}-build_android-${{ github.event.pull_request.head.sha || github.sha }}
+      group: ${{ github.workflow }}-build_android-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.event_name }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
@@ -41,7 +42,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24.x
+          node-version: 26.x
       - name: Install dependencies
         id: install_code
         run: bun i
@@ -62,7 +63,7 @@ jobs:
         run: bash ./.github/scripts/verify-packed-example.sh android
   build_ios:
     concurrency:
-      group: ${{ github.workflow }}-build_ios-${{ github.event.pull_request.head.sha || github.sha }}
+      group: ${{ github.workflow }}-build_ios-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.event_name }}
       cancel-in-progress: true
     runs-on: macOS-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
@@ -74,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24.x
+          node-version: 26.x
       - name: Install dependencies
         id: install_code
         run: bun i
@@ -90,7 +91,7 @@ jobs:
         run: bash ./.github/scripts/verify-packed-example.sh ios
   web:
     concurrency:
-      group: ${{ github.workflow }}-web-${{ github.event.pull_request.head.sha || github.sha }}
+      group: ${{ github.workflow }}-web-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.event_name }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     # Keep this job capped at 10 minutes; never raise it unless explicitly asked.
@@ -127,7 +128,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24.x
+          node-version: 26.x
       - name: Upsert beta publish comment
         uses: actions/github-script@v9
         with:
